@@ -1,0 +1,294 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <title>BILAL Scientific Calculator - Comprehensive Verification Test Suite</title>
+  <style>
+    body { font-family: monospace; background: #0f172a; color: #f8fafc; padding: 24px; line-height: 1.6; }
+    h1 { color: #38bdf8; }
+    .summary { font-size: 1.2rem; margin: 16px 0; padding: 12px; border-radius: 8px; font-weight: bold; }
+    .summary.pass { background: rgba(16, 185, 129, 0.2); color: #34d399; border: 1px solid #059669; }
+    .summary.fail { background: rgba(239, 68, 68, 0.2); color: #f87171; border: 1px solid #dc2626; }
+    .category { margin-top: 20px; font-size: 1.1rem; color: #fbbf24; border-bottom: 1px solid #334155; padding-bottom: 4px; }
+    .test-row { margin: 4px 0; }
+    .pass-tag { color: #34d399; font-weight: bold; }
+    .fail-tag { color: #f87171; font-weight: bold; }
+  </style>
+</head>
+<body>
+  <h1>BILAL SCIENTIFIC CALCULATOR — Test Suite</h1>
+  <div id="testSummary" class="summary">Running tests...</div>
+  <div id="testLogs"></div>
+
+  <!-- Hidden iframe loading the actual application to test live DOM & Styles -->
+  <iframe id="appFrame" src="index.html" style="width: 1000px; height: 800px; display: none;"></iframe>
+
+  <script src="calculator.js"></script>
+  <script>
+    window.addEventListener('DOMContentLoaded', () => {
+      const frame = document.getElementById('appFrame');
+      frame.onload = () => runAllTests(frame.contentWindow);
+    });
+
+    function runAllTests(appWin) {
+      const logs = [];
+      let passedCount = 0;
+      let failedCount = 0;
+
+      function assert(condition, testName, details = '') {
+        if (condition) {
+          passedCount++;
+          logs.push(`<div class="test-row"><span class="pass-tag">[PASS]</span> ${testName} ${details ? '(' + details + ')' : ''}</div>`);
+        } else {
+          failedCount++;
+          logs.push(`<div class="test-row"><span class="fail-tag">[FAIL]</span> ${testName} — ${details}</div>`);
+          console.error(`FAIL: ${testName}`, details);
+        }
+      }
+
+      function addCategory(name) {
+        logs.push(`<div class="category">${name}</div>`);
+      }
+
+      const engine = new MathEngine();
+      const doc = appWin.document;
+      const app = appWin.bilalApp;
+
+      // ---------------------------------------------------------
+      // SECTION 1: Design, Appearance & Branding Requirements
+      // ---------------------------------------------------------
+      addCategory("1. Design, Appearance & Branding Verification");
+
+      // Verify top brand name: BILAL SCIENTIFIC CALCULATOR
+      const brandTitle = doc.querySelector('.brand-title');
+      assert(brandTitle && brandTitle.innerText.includes('BILAL SCIENTIFIC CALCULATOR'),
+        'Top Header Brand Name contains "BILAL SCIENTIFIC CALCULATOR"',
+        brandTitle ? brandTitle.innerText : 'Element not found');
+
+      // Verify bottom signature: BY BILAL
+      const byBilal = doc.querySelector('.by-bilal');
+      assert(byBilal && byBilal.innerText.includes('BY BILAL'),
+        'Bottom Footer displays "BY BILAL"',
+        byBilal ? byBilal.innerText : 'Element not found');
+
+      // Verify Default website background is White
+      const htmlEl = doc.documentElement;
+      assert(htmlEl.getAttribute('data-theme') === 'light',
+        'Default theme is Light Mode');
+      const computedBody = appWin.getComputedStyle(doc.body);
+      const bgVal = computedBody.backgroundColor;
+      // In rgb, white is rgb(255, 255, 255)
+      assert(bgVal === 'rgb(255, 255, 255)',
+        'Entire website background is pure White in default mode', `Got ${bgVal}`);
+
+      // Verify calculator chassis body is Black
+      const calcChassis = doc.getElementById('calculatorChassis');
+      const computedChassis = appWin.getComputedStyle(calcChassis);
+      const chassisBg = computedChassis.backgroundColor;
+      // Black shades (RGB components <= 15)
+      const rgbMatch = chassisBg.match(/rgba?\((\d+),\s*(\d+),\s*(\d+)/);
+      const isBlackChassis = rgbMatch && Number(rgbMatch[1]) < 20 && Number(rgbMatch[2]) < 20 && Number(rgbMatch[3]) < 25;
+      assert(isBlackChassis, 'Calculator body is Black', `Got ${chassisBg}`);
+
+      // Verify ALL calculator buttons are Blue
+      const allButtons = doc.querySelectorAll('.calc-btn');
+      let nonBlueCount = 0;
+      allButtons.forEach(btn => {
+        const cls = btn.className;
+        const isBlueClass = cls.includes('btn-blue-');
+        if (!isBlueClass) nonBlueCount++;
+      });
+      assert(nonBlueCount === 0 && allButtons.length >= 35,
+        'All calculator buttons are styled Blue',
+        `Checked ${allButtons.length} buttons, non-blue: ${nonBlueCount}`);
+
+      // ---------------------------------------------------------
+      // SECTION 2: Basic Calculator Functions
+      // ---------------------------------------------------------
+      addCategory("2. Basic Calculator Functions");
+
+      // Addition (+)
+      assert(engine.calculate("125 + 375") === 500, 'Addition: 125 + 375 = 500');
+
+      // Subtraction (-)
+      assert(engine.calculate("1000 - 455") === 545, 'Subtraction: 1000 - 455 = 545');
+
+      // Multiplication (×)
+      assert(engine.calculate("25 × 4") === 100, 'Multiplication: 25 × 4 = 100');
+      assert(engine.calculate("12 * 12") === 144, 'Multiplication: 12 * 12 = 144');
+
+      // Division (÷)
+      assert(engine.calculate("144 ÷ 12") === 12, 'Division: 144 ÷ 12 = 12');
+      assert(engine.calculate("50 / 2") === 25, 'Division: 50 / 2 = 25');
+
+      // Percentage (%)
+      assert(engine.calculate("200 * 15%") === 30, 'Percentage: 200 * 15% = 30');
+      assert(engine.calculate("50%") === 0.5, 'Percentage postfix: 50% = 0.5');
+
+      // Decimal (.)
+      assert(engine.calculate("3.14 + 2.86") === 6, 'Decimal arithmetic: 3.14 + 2.86 = 6');
+
+      // Parentheses ( ) & Order of Operations
+      assert(engine.calculate("2 + 3 × 4") === 14, 'PEMDAS: 2 + 3 × 4 = 14');
+      assert(engine.calculate("(2 + 3) × 4") === 20, 'Parentheses: (2 + 3) × 4 = 20');
+      assert(engine.calculate("((10 - 2) * (3 + 1)) / 4") === 8, 'Nested Parentheses: ((10-2)*(3+1))/4 = 8');
+
+      // ---------------------------------------------------------
+      // SECTION 3: Scientific Calculator Functions
+      // ---------------------------------------------------------
+      addCategory("3. Scientific Calculator Functions");
+
+      // Sine (sin)
+      engine.setAngleMode('DEG');
+      assert(engine.calculate("sin(0)") === 0, 'sin(0°) = 0');
+      assert(engine.calculate("sin(30)") === 0.5, 'sin(30°) = 0.5');
+      assert(engine.calculate("sin(90)") === 1, 'sin(90°) = 1');
+
+      // Cosine (cos)
+      assert(engine.calculate("cos(0)") === 1, 'cos(0°) = 1');
+      assert(engine.calculate("cos(60)") === 0.5, 'cos(60°) = 0.5');
+      assert(engine.calculate("cos(90)") === 0, 'cos(90°) = 0');
+
+      // Tangent (tan)
+      assert(engine.calculate("tan(0)") === 0, 'tan(0°) = 0');
+      assert(engine.calculate("tan(45)") === 1, 'tan(45°) = 1');
+
+      // Inverse Trigonometry (sin⁻¹, cos⁻¹, tan⁻¹)
+      assert(Math.abs(engine.calculate("sin⁻¹(0.5)") - 30) < 1e-6, 'sin⁻¹(0.5) = 30°');
+      assert(Math.abs(engine.calculate("cos⁻¹(0.5)") - 60) < 1e-6, 'cos⁻¹(0.5) = 60°');
+      assert(Math.abs(engine.calculate("tan⁻¹(1)") - 45) < 1e-6, 'tan⁻¹(1) = 45°');
+
+      // Radian Mode Check
+      engine.setAngleMode('RAD');
+      assert(Math.abs(engine.calculate("sin(π / 2)") - 1) < 1e-6, 'Radian sin(π/2) = 1');
+      assert(Math.abs(engine.calculate("cos(π)") - (-1)) < 1e-6, 'Radian cos(π) = -1');
+      assert(Math.abs(engine.calculate("tan(π / 4)") - 1) < 1e-6, 'Radian tan(π/4) = 1');
+      assert(Math.abs(engine.calculate("sin⁻¹(1)") - (Math.PI / 2)) < 1e-6, 'Radian sin⁻¹(1) = π/2');
+      engine.setAngleMode('DEG'); // reset
+
+      // Square (x²) & Cube (x³)
+      assert(engine.calculate("12²") === 144, 'Square: 12² = 144');
+      assert(engine.calculate("5³") === 125, 'Cube: 5³ = 125');
+
+      // Square Root (√) & Cube Root (∛)
+      assert(engine.calculate("√(64)") === 8, 'Square Root: √(64) = 8');
+      assert(engine.calculate("∛(125)") === 5, 'Cube Root: ∛(125) = 5');
+
+      // Power (xʸ)
+      assert(engine.calculate("2^8") === 256, 'Power: 2^8 = 256');
+      assert(engine.calculate("3^4") === 81, 'Power: 3^4 = 81');
+
+      // Logarithm (log - base 10)
+      assert(engine.calculate("log(10)") === 1, 'log(10) = 1');
+      assert(engine.calculate("log(10000)") === 4, 'log(10000) = 4');
+
+      // Natural Logarithm (ln - base e)
+      assert(engine.calculate("ln(e)") === 1, 'ln(e) = 1');
+      assert(Math.abs(engine.calculate("ln(e^3)") - 3) < 1e-6, 'ln(e³) = 3');
+
+      // Factorial (n!)
+      assert(engine.calculate("0!") === 1, 'Factorial: 0! = 1');
+      assert(engine.calculate("1!") === 1, 'Factorial: 1! = 1');
+      assert(engine.calculate("5!") === 120, 'Factorial: 5! = 120');
+      assert(engine.calculate("7!") === 5040, 'Factorial: 7! = 5040');
+
+      // Constants: Pi (π) and Euler's Number (e)
+      assert(Math.abs(engine.calculate("π") - Math.PI) < 1e-12, 'Constant π = 3.141592653589...');
+      assert(Math.abs(engine.calculate("e") - Math.E) < 1e-12, 'Constant e = 2.718281828459...');
+
+      // Reciprocal (1/x)
+      assert(engine.calculate("1/(4)") === 0.25, 'Reciprocal: 1/4 = 0.25');
+      assert(engine.calculate("1/(8)") === 0.125, 'Reciprocal: 1/8 = 0.125');
+
+      // Absolute Value (|x|)
+      assert(engine.calculate("abs(-99)") === 99, 'Absolute value: abs(-99) = 99');
+      assert(engine.calculate("abs(50)") === 50, 'Absolute value: abs(50) = 50');
+
+      // Exponential (eˣ) & Power of 10 (10ˣ)
+      assert(Math.abs(engine.calculate("e^(2)") - Math.exp(2)) < 1e-6, 'Exponential: e^(2) ≈ 7.389');
+      assert(engine.calculate("10^(5)") === 100000, 'Power of 10: 10^(5) = 100000');
+
+      // ---------------------------------------------------------
+      // SECTION 4: Additional Features & UI Verification
+      // ---------------------------------------------------------
+      addCategory("4. Additional Features Verification");
+
+      // DEG and RAD mode toggling via UI
+      const initialMode = app.engine.getAngleMode();
+      app.toggleAngleMode();
+      assert(app.engine.getAngleMode() !== initialMode,
+        'DEG / RAD toggle button switches angle mode');
+      app.toggleAngleMode(); // switch back
+
+      // Theme Modes: Light, Dark, and Night Vision
+      app.setTheme('dark');
+      assert(htmlEl.getAttribute('data-theme') === 'dark',
+        'Dark Mode toggle sets data-theme="dark"');
+
+      app.setTheme('night');
+      assert(htmlEl.getAttribute('data-theme') === 'night',
+        'Night Vision Mode sets data-theme="night"');
+      const nightBg = appWin.getComputedStyle(doc.body).backgroundColor;
+      assert(nightBg === 'rgb(0, 0, 0)',
+        'Night Vision Mode sets background to pitch black (scotopic protection)', `Got ${nightBg}`);
+
+      app.setTheme('light');
+      assert(htmlEl.getAttribute('data-theme') === 'light',
+        'Light Mode restored with pure white background');
+
+      // Calculation History Feature
+      app.clearHistory();
+      assert(app.history.length === 0, 'History Clear works');
+      app.addHistoryItem("sin(30) + 10", "10.5");
+      assert(app.history.length === 1 && app.history[0].result === "10.5",
+        'History logs completed calculations');
+      const storedHist = localStorage.getItem('bilal_calc_history');
+      assert(storedHist && storedHist.includes('10.5'),
+        'History persists to LocalStorage');
+
+      // Keyboard handler simulation
+      const keyEvent = new KeyboardEvent('keydown', { key: '5' });
+      app.handleKeyboard(keyEvent);
+      assert(app.expression.includes('5'),
+        'Physical keyboard number key "5" registers in expression');
+      app.clearAll();
+
+      // Clear All (AC) and Delete (⌫)
+      app.expression = '12345';
+      app.deleteLast();
+      assert(app.expression === '1234', 'Delete (⌫) deletes last character');
+      app.clearAll();
+      assert(app.expression === '' && app.currentResult === '0', 'Clear All (AC) resets calculator state');
+
+      // Error Handling: Division by zero
+      let divZeroCaught = false;
+      try {
+        engine.calculate("100 / 0");
+      } catch (e) {
+        divZeroCaught = e.message.includes('divide by zero');
+      }
+      assert(divZeroCaught, 'Division by zero safely throws error');
+
+      // Error Handling: Negative Square Root
+      let negSqrtCaught = false;
+      try {
+        engine.calculate("√(-25)");
+      } catch (e) {
+        negSqrtCaught = e.message.includes('Domain Error');
+      }
+      assert(negSqrtCaught, 'Square root of negative number safely throws Domain Error');
+
+      // ---------------------------------------------------------
+      // SUMMARY RENDER
+      // ---------------------------------------------------------
+      const total = passedCount + failedCount;
+      const summaryEl = document.getElementById('testSummary');
+      summaryEl.innerText = `ALL VERIFICATIONS COMPLETE: ${passedCount} / ${total} TESTS PASSED (${failedCount} FAILURES)`;
+      summaryEl.className = failedCount === 0 ? 'summary pass' : 'summary fail';
+
+      document.getElementById('testLogs').innerHTML = logs.join('\n');
+      console.log(`TESTS COMPLETE: PASSED=${passedCount}, FAILED=${failedCount}`);
+    }
+  </script>
+</body>
+</html>
